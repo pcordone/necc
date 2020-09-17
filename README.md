@@ -38,7 +38,7 @@ classNames - CSS class names, e.g. ".container"
 identifier - The view identifier, e.g. "#videoMode"
 
 You can effectively ignore all other attributes in the JSON model for the purpose of selector matching. Note that views 
-have several attributes that may nest child views. For this exercise, you only need to consider subviews, contentView, 
+have several attributes that may nest child views. For this exercise, you only need to consider subviews, contentView,
 input and control. 
 
 Compound selectors (e.g. "View#identifier") are not required, but you’ll certainly impress us if you support them. 
