@@ -13,9 +13,6 @@ import java.util.*;
  *
  */
 public class SelectorMatcher {
-
-    private JsonNode node;
-
     /**
      * Our enum of the nodes to consider for processing.
      */
@@ -55,6 +52,15 @@ public class SelectorMatcher {
             }
             return false;
         }
+
+        public static ConsideredNames fromString(String text) {
+            for (ConsideredNames b : ConsideredNames.values()) {
+                if (b.value.equalsIgnoreCase(text)) {
+                    return b;
+                }
+            }
+            return null;
+        }
     }
 
     enum ConsideredAttributes {
@@ -70,6 +76,10 @@ public class SelectorMatcher {
 
         public String getValue() {
             return value;
+        }
+
+        public boolean isEqualToString(String strValue) {
+            return this.value.equalsIgnoreCase(strValue);
         }
 
         public static ConsideredAttributes consideredAttributeFromString(String value) {
@@ -93,49 +103,42 @@ public class SelectorMatcher {
         }
     }
 
-    public void static processNodes() {
-
-    }
-
     /**
-     * This method processes the fiels of a node by checking if it is a node with one of the names we are considering.
-     * It will call processArrayNodes if it encounters a field that is an array of nodes.
+     * This method processes the fields.  It will recurse for any fields that are part of ConsideredNames.  We will keep
+     * track of any fields that match our selector so that when we get to the bottom of the recursion (i.e. we are at
+     * the leaf JSON nodes with no sub nodes) we know whether we should keep it.
      * @param nodeBeingProcessed - the node under processing.
      * @param consideredAttribute - the attribute we are considering for matching.
      * @param consideredAttributeValue - the attribute value we are considering for matching.
      */
     public static void processNodeFields(JsonNode nodeBeingProcessed, ConsideredAttributes consideredAttribute, String consideredAttributeValue) {
-        Iterator<Map.Entry<String, JsonNode>> nodes = nodeBeingProcessed.fields();
-        while (nodes.hasNext()) {
-            Map.Entry<String, JsonNode> entry = nodes.next();
+        // iterate through the fields looking to recurse down for any considered array or JSON object fields.
+        Iterator<Map.Entry<String, JsonNode>> fields = nodeBeingProcessed.fields();
+        ConsideredNames foundName = null;
+        while (fields.hasNext()) {
+            Map.Entry<String, JsonNode> entry = fields.next();
             String name = entry.getKey();
+            JsonNode value = entry.getValue();
+            // this is our recursion part
             if (ConsideredNames.isConsideredValue(name)) {
-                JsonNode node = entry.getValue();
-                if (node.isArray()) {
-                    processArrayNode(node, consideredAttribute, consideredAttributeValue);
-                } else {
-                    // we are at the leaf nodes so we can check if the attribute matches
-                    JsonNode attributeValue = node.get(consideredAttribute.getValue().toString());
-                    if (consideredAttributeValue.equalsIgnoreCase(attributeValue.asText())) {
-                        // we have found a node with an attribute value we are looking for.
-                        System.out.println("found " + node);
+                foundName = ConsideredNames.fromString(name);
+                if (value.isArray()) {
+                    Iterator<JsonNode> nodes = value.elements();
+                    while (nodes.hasNext()) {
+                        JsonNode node = nodes.next();
+                        processNodeFields(node, consideredAttribute, consideredAttributeValue);
                     }
+                } else {
+                    // any fields that were a considered field should be an object
+                    assert(value.isObject());
+                    processNodeFields(value, consideredAttribute, consideredAttributeValue);
+                }
+            } else {
+                // This is our termination part.  For fields we aren't recusing on, check if they match our selection.
+                if (foundName != null && consideredAttribute.isEqualToString(name) && consideredAttributeValue.equalsIgnoreCase(value.asText())) {
+                    System.out.println("{\"name\"=\"" + foundName.toString() + "\"");
                 }
             }
-        }
-    }
-
-    /**
-     * This method processes an array of nodes by calling processNode for each node in the array.
-     * @param arrayNode
-     * @param consideredAttribute - The attribute we are selecting for
-     * @param consideredAttributeValue - The attribute value we are selecting for
-     */
-    public static void processArrayNode(JsonNode arrayNode, ConsideredAttributes consideredAttribute, String consideredAttributeValue) {
-        Iterator<JsonNode> nodes = arrayNode.elements();
-        while(nodes.hasNext()) {
-            JsonNode node = nodes.next();
-            processNodeFields(node, consideredAttribute, consideredAttributeValue);
         }
     }
 
@@ -174,7 +177,9 @@ public class SelectorMatcher {
                 JsonNode rootNode = mapper.readTree(jsonData);
                 // let's make no assumptions about the root node and process all fields
                 System.out.println("Searching for attribute " + consideredAttribute.getValue() + "  with value " + selector);
+                System.out.println("[");
                 processNodeFields(rootNode, consideredAttribute, selector);
+                System.out.println("]");
             } catch (IOException e) {
                 System.err.println("Error! Error reading JSON file " + filename);
             }
