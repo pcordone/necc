@@ -1,9 +1,14 @@
 package org.necc;
+import com.fasterxml.jackson.core.PrettyPrinter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.necc.NodeProcessor.processNodeFields;
 
@@ -27,14 +32,17 @@ public class SelectorMatcherTest {
         try {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode rootNode = mapper.readTree(JSON);
-            StringBuffer output = new StringBuffer();
-            processNodeFields("subview", rootNode, NodeProcessor.ConsideredAttributes.CLASS, "Input", null,output);
-            String expected = "{\n" +
-                    "  \"name\": \"subview\",\n" +
-                    "  \"node number\": \"\",\n" +
-                    "  \"match attribute\": \"Input\"\n" +
-                    "}\n";
-            assertEquals(expected, output.toString());
+            List<SelectorOutput> output = new ArrayList<>();
+            processNodeFields("subview", rootNode, NodeProcessor.ConsideredAttributes.CLASS, "Input", null, output);
+            String expected = "[ {\n" +
+                    "  \"name\" : \"subview\",\n" +
+                    "  \"nodeNumber\" : null,\n" +
+                    "  \"matchAttributeValue\" : \"Input\"\n" +
+                    "} ]";
+            ObjectMapper outputMapper = new ObjectMapper();
+            ByteArrayOutputStream outputBaos = new ByteArrayOutputStream();
+            outputMapper.writerWithDefaultPrettyPrinter().writeValue(outputBaos, output);
+            assertEquals(expected, outputBaos.toString());
         } catch(IOException e) {
             fail("test threw exception " + e);
         }
@@ -113,38 +121,36 @@ public class SelectorMatcherTest {
                     "                    ]\n" +
                     "                  }\n";
 
-        String expected = "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"1\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"2\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"3\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"4\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"5\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n";
+        String expected = "[ {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 1,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 2,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 3,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 4,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 5,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "} ]";
         try {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode rootNode = mapper.readTree(JSON);
-            StringBuffer output = new StringBuffer();
+            List<SelectorOutput> output = new ArrayList<>();
             processNodeFields(null, rootNode, NodeProcessor.ConsideredAttributes.CLASS, "Input", null, output);
-            assertEquals(expected, output.toString());
-        } catch(IOException e) {
+            ObjectMapper outputMapper = new ObjectMapper();
+            ByteArrayOutputStream outputBaos = new ByteArrayOutputStream();
+            outputMapper.writerWithDefaultPrettyPrinter().writeValue(outputBaos, output);
+            assertEquals(expected, outputBaos.toString());        } catch(IOException e) {
             fail("test threw exception " + e);
         }
     }
@@ -624,142 +630,120 @@ public class SelectorMatcherTest {
                 "  ]\n" +
                 "}";
 
-        String expected = "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"1\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"2\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"3\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"4\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"5\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"1\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"2\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"3\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"4\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"1\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"2\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"3\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"4\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"5\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"6\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"7\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"8\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"1\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"2\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"3\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"4\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"5\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"1\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"2\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"3\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n" +
-                "{\n" +
-                "  \"name\": \"subviews\",\n" +
-                "  \"node number\": \"4\",\n" +
-                "  \"match attribute\": \"Input\"\n" +
-                "}\n";
+        String expected = "[ {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 1,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 2,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 3,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 4,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 5,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 1,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 2,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 3,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 4,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 1,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 2,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 3,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 4,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 5,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 6,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 7,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 8,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 1,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 2,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 3,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 4,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 5,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 1,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 2,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 3,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 4,\n" +
+                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "} ]";
         try {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode rootNode = mapper.readTree(JSON);
-            StringBuffer output = new StringBuffer();
+            List<SelectorOutput> output = new ArrayList<>();
             processNodeFields(null, rootNode, NodeProcessor.ConsideredAttributes.CLASS, "Input", null, output);
-            assertEquals(expected, output.toString());
+            ObjectMapper outputMapper = new ObjectMapper();
+            ByteArrayOutputStream outputBaos = new ByteArrayOutputStream();
+            outputMapper.writerWithDefaultPrettyPrinter().writeValue(outputBaos, output);
+            assertEquals(expected, outputBaos.toString());
         } catch(IOException e) {
             fail("test threw exception " + e);
         }

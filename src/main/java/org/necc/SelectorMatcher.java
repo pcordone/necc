@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import sun.jvm.hotspot.code.ConstantDoubleValue;
 
 import static org.necc.NodeProcessor.*;
+
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -49,11 +51,12 @@ public class SelectorMatcher {
                 JsonNode rootNode = mapper.readTree(jsonData);
                 // let's make no assumptions about the root node and process all fields
                 System.out.println("Searching for attribute " + consideredAttribute.getValue() + "  with value " + selector);
-                StringBuffer output = new StringBuffer();
-                output.append("[\n");
+                List<SelectorOutput> output = new ArrayList<>();
                 processNodeFields(null, rootNode, consideredAttribute, selector, null, output);
-                output.append("]");
-                System.out.println(output.toString());
+                ObjectMapper outputMapper = new ObjectMapper();
+                ByteArrayOutputStream outputBaos = new ByteArrayOutputStream();
+                outputMapper.writerWithDefaultPrettyPrinter().writeValue(outputBaos, output);
+                System.out.println(outputBaos.toString());
             } catch (IOException e) {
                 System.err.println("Error! Error reading JSON file " + filename);
             }

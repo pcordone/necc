@@ -3,6 +3,7 @@ package org.necc;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.Iterator;
+import java.util.List;
 
 public class NodeProcessor {
     /**
@@ -103,7 +104,7 @@ public class NodeProcessor {
      * @param consideredAttribute - the attribute we are considering for matching.
      * @param consideredAttributeValue - the attribute value we are considering for matching.
      */
-    public static void processNodeFields(String processedNodeName, JsonNode processedNode, ConsideredAttributes consideredAttribute, String consideredAttributeValue, Integer nodeNumber, StringBuffer output) {
+    public static void processNodeFields(String processedNodeName, JsonNode processedNode, ConsideredAttributes consideredAttribute, String consideredAttributeValue, Integer nodeNumber, List output) {
         // for object nodes, we need to check if this node matches our attribute criteria and emit JSON if so.
         assert (processedNode.isObject());
         String attributeName = consideredAttribute.getValue();
@@ -116,11 +117,7 @@ public class NodeProcessor {
         );
         if (actualAttributeNode != null && consideredAttributeValue.equalsIgnoreCase(actualAttributeNode.asText())) {
             System.out.println("Found match.");
-            output.append("{\n" +
-                    "  \"name\": \"" + processedNodeName + "\",\n" +
-                    "  \"node number\": \"" + (nodeNumber == null ? "" : nodeNumber) + "\",\n" +
-                    "  \"match attribute\": \"" + actualAttributeNode.asText() + "\"\n" +
-                    "}\n");
+            output.add(new SelectorOutput(processedNodeName, nodeNumber, actualAttributeNode.asText()));
         }
         // make sure we recurse on any nested nodes for fields that we should be considering
         for (ConsideredNames c : ConsideredNames.values()) {
