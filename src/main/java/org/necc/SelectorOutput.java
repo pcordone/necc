@@ -5,10 +5,9 @@ public class SelectorOutput {
     private Integer nodeNumber;
     private String matchAttributeValue;
 
-    public SelectorOutput(String name, Integer nodeNumber, String matchAttributeValue) {
+    public SelectorOutput(String name, Integer nodeNumber) {
         this.name = name;
         this.nodeNumber = nodeNumber;
-        this.matchAttributeValue = matchAttributeValue;
     }
 
     public String getName() {
@@ -25,13 +24,5 @@ public class SelectorOutput {
 
     public void setNodeNumber(Integer nodeNumber) {
         this.nodeNumber = nodeNumber;
-    }
-
-    public String getMatchAttributeValue() {
-        return matchAttributeValue;
-    }
-
-    public void setMatchAttributeValue(String matchAttributeValue) {
-        this.matchAttributeValue = matchAttributeValue;
     }
 }

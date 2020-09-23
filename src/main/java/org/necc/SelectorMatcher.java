@@ -2,9 +2,6 @@ package org.necc;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import sun.jvm.hotspot.code.ConstantDoubleValue;
-
-import static org.necc.NodeProcessor.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -34,32 +31,28 @@ public class SelectorMatcher {
         System.out.println("  . - selects classNames attribute value e.g. classNames contains e.g. \".container\"");
         System.out.println("  # - selects identifier attribute value e.g. identifier=\"videoMode\"");
         boolean keepRunning = true;
-        while(keepRunning) {
-            System.out.print("Enter a selector and press enter: ");
-            String selector = console.nextLine();
-            if (selector.isEmpty()) {
-                break;
-            }
-            char selectorFirstChar = selector.charAt(0);
-            ConsideredAttributes consideredAttribute = ConsideredAttributes.consideredAttributeFromChar(selectorFirstChar);
-            if (consideredAttribute != ConsideredAttributes.CLASS) {
-                selector = selector.substring(1, selector.length());
-            }
-            try {
-                byte[] jsonData = Files.readAllBytes(Paths.get(filename));
-                ObjectMapper mapper = new ObjectMapper();
-                JsonNode rootNode = mapper.readTree(jsonData);
-                // let's make no assumptions about the root node and process all fields
-                System.out.println("Searching for attribute " + consideredAttribute.getValue() + "  with value " + selector);
+        NodeProcessor nodeProcessor = new NodeProcessor();
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            byte[] jsonData = Files.readAllBytes(Paths.get(filename));
+            JsonNode rootNode = mapper.readTree(jsonData);
+            while(keepRunning) {
+                System.out.print("Enter a selector and press enter: ");
+                String selector = console.nextLine();
+                if (selector.isEmpty()) {
+                    break;
+                }
+                nodeProcessor.setSelector(selector);
                 List<SelectorOutput> output = new ArrayList<>();
-                processNodeFields(null, rootNode, consideredAttribute, selector, null, output);
+                nodeProcessor.processNodeFields(null, rootNode,null, output);
                 ObjectMapper outputMapper = new ObjectMapper();
                 ByteArrayOutputStream outputBaos = new ByteArrayOutputStream();
                 outputMapper.writerWithDefaultPrettyPrinter().writeValue(outputBaos, output);
                 System.out.println(outputBaos.toString());
-            } catch (IOException e) {
-                System.err.println("Error! Error reading JSON file " + filename);
             }
+
+        } catch (IOException e) {
+            System.err.println("Error! Error reading JSON file " + filename);
         }
     }
 }

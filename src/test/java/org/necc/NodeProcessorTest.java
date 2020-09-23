@@ -10,47 +10,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.necc.NodeProcessor.processNodeFields;
-
-public class SelectorMatcherTest {
-    @Test
-    void testParseSingleObjectNode() {
-        String JSON =
-                " {\n" +
-                        "  \"class\": \"Input\",\n" +
-                        "  \"label\": {\n" +
-                        "    \"text\": {\n" +
-                        "      \"text\": \"Video mode\"\n" +
-                        "        }\n" +
-                        "      },\n" +
-                        "  \"control\": {\n" +
-                        "    \"class\": \"VideoModeSelect\",\n" +
-                        "    \"identifier\": \"videoMode\"\n" +
-                        "    }\n" +
-                        "}";
-        // let's make no assumptions about the root node and process all fields
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode rootNode = mapper.readTree(JSON);
-            List<SelectorOutput> output = new ArrayList<>();
-            processNodeFields("subview", rootNode, NodeProcessor.ConsideredAttributes.CLASS, "Input", null, output);
-            String expected = "[ {\n" +
-                    "  \"name\" : \"subview\",\n" +
-                    "  \"nodeNumber\" : null,\n" +
-                    "  \"matchAttributeValue\" : \"Input\"\n" +
-                    "} ]";
-            ObjectMapper outputMapper = new ObjectMapper();
-            ByteArrayOutputStream outputBaos = new ByteArrayOutputStream();
-            outputMapper.writerWithDefaultPrettyPrinter().writeValue(outputBaos, output);
-            assertEquals(expected, outputBaos.toString());
-        } catch(IOException e) {
-            fail("test threw exception " + e);
-        }
-    }
-
-    @Test
-    void testParseNestedArrayNodesAsField() {
-        String JSON =
+public class NodeProcessorTest {
+    static String JSON_FILE =
             "                           {\n" +
                     "                    \"subviews\": [\n" +
                     "                      {\n" +
@@ -120,43 +81,162 @@ public class SelectorMatcherTest {
                     "                      }\n" +
                     "                    ]\n" +
                     "                  }\n";
-
-        String expected = "[ {\n" +
-                "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 1,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
-                "}, {\n" +
-                "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 2,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
-                "}, {\n" +
-                "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 3,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
-                "}, {\n" +
-                "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 4,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
-                "}, {\n" +
-                "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 5,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
-                "} ]";
+    @Test
+    void testCompoundSelectorMatchClassOnly() {
+        String JSON = "  {\n" +
+                "            \"class\": \"Input\",\n" +
+                "            \"identifier\": \"videoMode\",\n" +
+                "            \"classNames\": [\n" +
+                "                    \"column\",\n" +
+                "                    \"container\"\n" +
+                "            ]\n" +
+                "        }";
         try {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode rootNode = mapper.readTree(JSON);
-            List<SelectorOutput> output = new ArrayList<>();
-            processNodeFields(null, rootNode, NodeProcessor.ConsideredAttributes.CLASS, "Input", null, output);
-            ObjectMapper outputMapper = new ObjectMapper();
-            ByteArrayOutputStream outputBaos = new ByteArrayOutputStream();
-            outputMapper.writerWithDefaultPrettyPrinter().writeValue(outputBaos, output);
-            assertEquals(expected, outputBaos.toString());        } catch(IOException e) {
+            String selectorStr = "Input";
+            NodeProcessor.CompoundSelector compoundSelector = new NodeProcessor.CompoundSelector(selectorStr);
+            assertTrue(compoundSelector.selectorMatches(rootNode));
+        } catch(IOException e) {
             fail("test threw exception " + e);
         }
     }
 
     @Test
-    void testInputFile() {
+    void testCompoundSelectorMatch() {
+        String JSON = "  {\n" +
+                "            \"class\": \"Input\",\n" +
+                "            \"identifier\": \"videoMode\",\n" +
+                "            \"classNames\": [\n" +
+                "                    \"column\",\n" +
+                "                    \"container\"\n" +
+                "            ]\n" +
+                "        }";
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode rootNode = mapper.readTree(JSON);
+            String selectorStr = "Input#videoMode.column";
+            NodeProcessor.CompoundSelector compoundSelector = new NodeProcessor.CompoundSelector(selectorStr);
+            assertTrue(compoundSelector.selectorMatches(rootNode));
+        } catch(IOException e) {
+            fail("test threw exception " + e);
+        }
+    }
+
+    @Test
+    void testCompoundSelectorNoMatchOnArrayAttribute() {
+        String JSON = "  {\n" +
+                "            \"class\": \"Input\",\n" +
+                "            \"identifier\": \"videoMode\",\n" +
+                "            \"classNames\": [\n" +
+                "                    \"column\",\n" +
+                "                    \"container\"\n" +
+                "            ]\n" +
+                "        }";
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode rootNode = mapper.readTree(JSON);
+            String selectorStr = "Input#videoMode.nomatch";
+            NodeProcessor.CompoundSelector compoundSelector = new NodeProcessor.CompoundSelector(selectorStr);
+            assertFalse(compoundSelector.selectorMatches(rootNode));
+        } catch(IOException e) {
+            fail("test threw exception " + e);
+        }
+    }
+
+    @Test
+    void testCompoundSelectorNoMatchOnClass() {
+        String JSON = "  {\n" +
+                "            \"class\": \"Input\",\n" +
+                "            \"identifier\": \"videoMode\",\n" +
+                "            \"classNames\": [\n" +
+                "                    \"column\",\n" +
+                "                    \"container\"\n" +
+                "            ]\n" +
+                "        }";
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode rootNode = mapper.readTree(JSON);
+            String selectorStr = "Nomatch#videoMode.column";
+            NodeProcessor.CompoundSelector compoundSelector = new NodeProcessor.CompoundSelector(selectorStr);
+            assertFalse(compoundSelector.selectorMatches(rootNode));
+        } catch(IOException e) {
+            fail("test threw exception " + e);
+        }
+    }
+
+    @Test
+    void testProcessSingleObjectNode() {
+        String JSON =
+                " {\n" +
+                        "  \"class\": \"Input\",\n" +
+                        "  \"label\": {\n" +
+                        "    \"text\": {\n" +
+                        "      \"text\": \"Video mode\"\n" +
+                        "        }\n" +
+                        "      },\n" +
+                        "  \"control\": {\n" +
+                        "    \"class\": \"VideoModeSelect\",\n" +
+                        "    \"identifier\": \"videoMode\"\n" +
+                        "    }\n" +
+                        "}";
+        // let's make no assumptions about the root node and process all fields
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode rootNode = mapper.readTree(JSON);
+            List<SelectorOutput> output = new ArrayList<>();
+            NodeProcessor processor = new NodeProcessor();
+            processor.setSelector("Input");
+            processor.processNodeFields("subview", rootNode, null, output);
+            String expected = "[ {\n" +
+                    "  \"name\" : \"subview\",\n" +
+                    "  \"nodeNumber\" : null\n" +
+                    "} ]";
+            ObjectMapper outputMapper = new ObjectMapper();
+            ByteArrayOutputStream outputBaos = new ByteArrayOutputStream();
+            outputMapper.writerWithDefaultPrettyPrinter().writeValue(outputBaos, output);
+            assertEquals(expected, outputBaos.toString());
+        } catch(IOException e) {
+            fail("test threw exception " + e);
+        }
+    }
+
+    @Test
+    void testProcessNestedArrayNodesAsField() {
+        String expected = "[ {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 1\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 2\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 3\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 4\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 5\n" +
+                "} ]";
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode rootNode = mapper.readTree(JSON_FILE);
+            List<SelectorOutput> output = new ArrayList<>();
+            NodeProcessor processor = new NodeProcessor();
+            processor.setSelector("Input");
+            processor.processNodeFields(null, rootNode, null, output);
+            ObjectMapper outputMapper = new ObjectMapper();
+            ByteArrayOutputStream outputBaos = new ByteArrayOutputStream();
+            outputMapper.writerWithDefaultPrettyPrinter().writeValue(outputBaos, output);
+            assertEquals(expected, outputBaos.toString());
+        } catch(IOException e) {
+            fail("test threw exception " + e);
+        }
+    }
+
+    @Test
+    void testProcessInputFile() {
         String JSON = "{\n" +
                 "  \"identifier\": \"System\",\n" +
                 "  \"subviews\": [\n" +
@@ -632,119 +712,186 @@ public class SelectorMatcherTest {
 
         String expected = "[ {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 1,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 1\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 2,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 2\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 3,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 3\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 4,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 4\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 5,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 5\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 1,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 1\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 2,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 2\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 3,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 3\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 4,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 4\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 1,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 1\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 2,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 2\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 3,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 3\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 4,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 4\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 5,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 5\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 6,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 6\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 7,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 7\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 8,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 8\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 1,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 1\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 2,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 2\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 3,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 3\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 4,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 4\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 5,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 5\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 1,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 1\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 2,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 2\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 3,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 3\n" +
                 "}, {\n" +
                 "  \"name\" : \"subviews\",\n" +
-                "  \"nodeNumber\" : 4,\n" +
-                "  \"matchAttributeValue\" : \"Input\"\n" +
+                "  \"nodeNumber\" : 4\n" +
                 "} ]";
         try {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode rootNode = mapper.readTree(JSON);
             List<SelectorOutput> output = new ArrayList<>();
-            processNodeFields(null, rootNode, NodeProcessor.ConsideredAttributes.CLASS, "Input", null, output);
+            NodeProcessor processor = new NodeProcessor();
+            processor.setSelector("Input");
+            processor.processNodeFields(null, rootNode, null, output);
             ObjectMapper outputMapper = new ObjectMapper();
             ByteArrayOutputStream outputBaos = new ByteArrayOutputStream();
             outputMapper.writerWithDefaultPrettyPrinter().writeValue(outputBaos, output);
             assertEquals(expected, outputBaos.toString());
         } catch(IOException e) {
+            fail("test threw exception " + e);
+        }
+    }
+
+    @Test
+    void testProcessNestedArrayNodesAsFieldCompoundSelector() {
+        String expected = "[ {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 1\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 2\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 3\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 4\n" +
+                "}, {\n" +
+                "  \"name\" : \"subviews\",\n" +
+                "  \"nodeNumber\" : 5\n" +
+                "} ]";
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode rootNode = mapper.readTree(JSON_FILE);
+            List<SelectorOutput> output = new ArrayList<>();
+            NodeProcessor processor = new NodeProcessor();
+            processor.setSelector("Input");
+            processor.processNodeFields(null, rootNode, null, output);
+            ObjectMapper outputMapper = new ObjectMapper();
+            ByteArrayOutputStream outputBaos = new ByteArrayOutputStream();
+            outputMapper.writerWithDefaultPrettyPrinter().writeValue(outputBaos, output);
+            assertEquals(expected, outputBaos.toString());        } catch(IOException e) {
+            fail("test threw exception " + e);
+        }
+    }
+
+    @Test
+    void testProcessInputFileClassInputVideoMode() {
+        String expected = "[ ]";
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode rootNode = mapper.readTree(JSON_FILE);
+            List<SelectorOutput> output = new ArrayList<>();
+            NodeProcessor processor = new NodeProcessor();
+            processor.setSelector("Input#videoMode");
+            processor.processNodeFields(null, rootNode, null, output);
+            ObjectMapper outputMapper = new ObjectMapper();
+            ByteArrayOutputStream outputBaos = new ByteArrayOutputStream();
+            outputMapper.writerWithDefaultPrettyPrinter().writeValue(outputBaos, output);
+            assertEquals(expected, outputBaos.toString());        } catch(IOException e) {
+            fail("test threw exception " + e);
+        }
+    }
+
+    @Test
+    void testProcessInputFileClassInputIdentifierVideoMode() {
+        String expected = "[ ]";
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode rootNode = mapper.readTree(JSON_FILE);
+            List<SelectorOutput> output = new ArrayList<>();
+            NodeProcessor processor = new NodeProcessor();
+            processor.setSelector("Input#videoMode");
+            processor.processNodeFields(null, rootNode, null, output);
+            ObjectMapper outputMapper = new ObjectMapper();
+            ByteArrayOutputStream outputBaos = new ByteArrayOutputStream();
+            outputMapper.writerWithDefaultPrettyPrinter().writeValue(outputBaos, output);
+            assertEquals(expected, outputBaos.toString());        } catch(IOException e) {
+            fail("test threw exception " + e);
+        }
+    }
+
+    @Test
+    void testProcessInputFileClassVideoModeSelectIdentifierVideoMode() {
+        String expected = "[ {\n" +
+                "  \"name\" : \"control\",\n" +
+                "  \"nodeNumber\" : null\n" +
+                "} ]";
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode rootNode = mapper.readTree(JSON_FILE);
+            List<SelectorOutput> output = new ArrayList<>();
+            NodeProcessor processor = new NodeProcessor();
+            processor.setSelector("VideoModeSelect#videoMode");
+
+            processor.processNodeFields(null, rootNode, null, output);
+            ObjectMapper outputMapper = new ObjectMapper();
+            ByteArrayOutputStream outputBaos = new ByteArrayOutputStream();
+            outputMapper.writerWithDefaultPrettyPrinter().writeValue(outputBaos, output);
+            assertEquals(expected, outputBaos.toString());        } catch(IOException e) {
             fail("test threw exception " + e);
         }
     }

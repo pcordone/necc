@@ -1,9 +1,10 @@
 package org.necc;
 
 import com.fasterxml.jackson.databind.JsonNode;
-
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 public class NodeProcessor {
     /**
@@ -96,28 +97,80 @@ public class NodeProcessor {
         }
     }
 
+    public static class CompoundSelector {
+        private HashMap<ConsideredAttributes, String> selectors = new HashMap<>();
+
+        /**
+         * Let's kill the private constructor since this class is immutable.
+         */
+        private CompoundSelector() {
+        }
+
+        /**
+         * Parses the string and builds our map of compound selectors and values.
+         * @param selectorStr The selector string the user entered that will be parsed.
+         */
+        public CompoundSelector(String selectorStr) {
+            String fields[] = selectorStr.split("(?=[.#])");
+            for (String field: fields) {
+                char selectorFirstChar = field.charAt(0);
+                ConsideredAttributes consideredAttribute = ConsideredAttributes.consideredAttributeFromChar(selectorFirstChar);
+                String selectorValue = field;
+                if (consideredAttribute != ConsideredAttributes.CLASS) {
+                    selectorValue = field.substring(1);
+                }
+                selectors.put(consideredAttribute, selectorValue);
+            }
+        }
+
+        public boolean selectorMatches(JsonNode node) {
+            for (Map.Entry<ConsideredAttributes, String> entry : selectors.entrySet()) {
+                ConsideredAttributes attributeName = entry.getKey();
+                String attributeValue = entry.getValue();
+                JsonNode actualAttributeNode = node.get(attributeName.getValue());
+                if (actualAttributeNode == null) {
+                    return false;
+                }
+                else if (actualAttributeNode.isArray()) {
+                    boolean oneMatched = false;
+                    for (Iterator<JsonNode> it = actualAttributeNode.iterator(); it.hasNext(); ) {
+                        JsonNode arrayValue = it.next();
+                        if (attributeValue.equals(arrayValue.asText())) {
+                            oneMatched = true;
+                            break;
+                        }
+                    }
+                    if (!oneMatched) {
+                        return false;
+                    }
+                } else if (!attributeValue.equalsIgnoreCase(actualAttributeNode.asText())) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    private CompoundSelector compoundSelector;
+
+    public NodeProcessor() {
+    }
+
+    public void setSelector(String selector) {
+        compoundSelector = new CompoundSelector(selector);
+    }
+
     /**
      * This method processes the fields.  It will recurse for any fields that are part of ConsideredNames.  We will keep
      * track of any fields that match our selector so that when we get to the bottom of the recursion (i.e. we are at
      * the leaf JSON nodes with no sub nodes) we know whether we should keep it.
      * @param processedNode - the node under processing.
-     * @param consideredAttribute - the attribute we are considering for matching.
-     * @param consideredAttributeValue - the attribute value we are considering for matching.
      */
-    public static void processNodeFields(String processedNodeName, JsonNode processedNode, ConsideredAttributes consideredAttribute, String consideredAttributeValue, Integer nodeNumber, List output) {
+    public void processNodeFields(String processedNodeName, JsonNode processedNode, Integer nodeNumber, List output) {
         // for object nodes, we need to check if this node matches our attribute criteria and emit JSON if so.
         assert (processedNode.isObject());
-        String attributeName = consideredAttribute.getValue();
-        JsonNode actualAttributeNode = processedNode.get(attributeName);
-        System.out.println("Considering node name '" + processedNodeName + "'" +
-                " matching attribute '" + consideredAttribute.getValue() + "'" +
-                " matching value '"  + consideredAttributeValue + "'" +
-                " actual value '" + (actualAttributeNode == null ? "null" : actualAttributeNode.asText()) + "'" +
-                " node number '" + (nodeNumber == null ? "" : nodeNumber) + "'"
-        );
-        if (actualAttributeNode != null && consideredAttributeValue.equalsIgnoreCase(actualAttributeNode.asText())) {
-            System.out.println("Found match.");
-            output.add(new SelectorOutput(processedNodeName, nodeNumber, actualAttributeNode.asText()));
+        if (compoundSelector.selectorMatches(processedNode) ) {
+            output.add(new SelectorOutput(processedNodeName, nodeNumber));
         }
         // make sure we recurse on any nested nodes for fields that we should be considering
         for (ConsideredNames c : ConsideredNames.values()) {
@@ -129,10 +182,10 @@ public class NodeProcessor {
                     Iterator<JsonNode> nodes = nestedNode.elements();
                     while (nodes.hasNext()) {
                         JsonNode node = nodes.next();
-                        processNodeFields(c.getValue(), node, consideredAttribute, consideredAttributeValue, i++, output);
+                        processNodeFields(c.getValue(), node, i++, output);
                     }
                 }
-                processNodeFields(c.getValue(), nestedNode, consideredAttribute, consideredAttributeValue, null, output);
+                processNodeFields(c.getValue(), nestedNode, null, output);
             }
         }
     }
